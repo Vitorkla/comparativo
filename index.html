@@ -159,6 +159,55 @@
             <!-- Table Section -->
             <section class="table-section">
                 <h2>Tabela Comparativa</h2>
+                <div class="table-filters">
+                    <div class="table-filters__grid">
+                        <div class="filter-group">
+                            <label for="tableGerenteSelect" class="form-label">Gerente de Negócios</label>
+                            <select id="tableGerenteSelect" class="form-control">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="tableAgenciaSelect" class="form-label">Agência</label>
+                            <select id="tableAgenciaSelect" class="form-control">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="filter-group indicators-group">
+                            <label class="form-label">Indicadores da Tabela</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tableCapitalSocial" checked>
+                                    <span class="checkmark"></span>
+                                    Capital Social
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tableCarteiraCredito" checked>
+                                    <span class="checkmark"></span>
+                                    Carteira Crédito
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tableAssociados" checked>
+                                    <span class="checkmark"></span>
+                                    Associados
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tableRdcLca" checked>
+                                    <span class="checkmark"></span>
+                                    RDC LCA
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tablePoupanca" checked>
+                                    <span class="checkmark"></span>
+                                    Poupança
+                                </label>
+                            </div>
+                        </div>
+                        <div class="filter-actions table-filter-actions">
+                            <button class="btn btn--secondary" id="clearTableFilters">Limpar Filtros da Tabela</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table class="comparison-table" id="comparisonTable">
                         <thead id="tableHead"></thead>
