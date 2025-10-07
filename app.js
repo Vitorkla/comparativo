@@ -14,13 +14,14 @@ class DashboardController {
 			"RDC LCA",
 			"Poupança",
 		];
+		this.defaultIndicator = this.indicators[0];
 		this.currencyIndicators = [
 			"Capital Social",
 			"Carteira Credito",
 			"RDC LCA",
 			"Poupança",
 		];
-		this.indicatorCheckboxMap = {
+		this.indicatorInputMap = {
 			"Capital Social": "capitalSocial",
 			"Carteira Credito": "carteiraCredito",
 			Associados: "associados",
@@ -48,6 +49,7 @@ class DashboardController {
 	init() {
 		this.setupEventListeners();
 		this.initializeButtonState();
+		this.setIndicatorSelection(this.defaultIndicator);
 	}
 
 	initializeButtonState() {
@@ -86,8 +88,8 @@ class DashboardController {
 			.getElementById("agenciaSelect")
 			.addEventListener("change", () => this.applyFilters());
 
-		// Checkboxes dos indicadores
-		Object.values(this.indicatorCheckboxMap).forEach((id) => {
+		// Seleção de indicadores
+		Object.values(this.indicatorInputMap).forEach((id) => {
 			document
 				.getElementById(id)
 				.addEventListener("change", () => this.applyFilters());
@@ -541,18 +543,13 @@ class DashboardController {
 	applyFilters() {
 		const selectedGerente = document.getElementById("gerenteSelect").value;
 		const selectedAgencia = document.getElementById("agenciaSelect").value;
-
-		const indicatorSelection = {};
-		this.indicators.forEach((indicator) => {
-			const checkboxId = this.indicatorCheckboxMap[indicator];
-			indicatorSelection[indicator] =
-				document.getElementById(checkboxId).checked;
-		});
+		const selectedIndicator = this.getSelectedIndicator();
 
 		this.filteredData = this.processedData.filter((item) => {
 			const gerenteMatch = !selectedGerente || item.gerente === selectedGerente;
 			const agenciaMatch = !selectedAgencia || item.agencia === selectedAgencia;
-			const indicatorMatch = indicatorSelection[item.indicador];
+			const indicatorMatch =
+				!selectedIndicator || item.indicador === selectedIndicator;
 
 			return gerenteMatch && agenciaMatch && indicatorMatch;
 		});
@@ -565,11 +562,27 @@ class DashboardController {
 		document.getElementById("gerenteSelect").value = "";
 		document.getElementById("agenciaSelect").value = "";
 
-		Object.values(this.indicatorCheckboxMap).forEach((id) => {
-			document.getElementById(id).checked = true;
-		});
+		this.setIndicatorSelection(this.defaultIndicator);
 
 		this.applyFilters();
+	}
+
+	setIndicatorSelection(indicator) {
+		const targetIndicator = indicator || this.defaultIndicator;
+		Object.entries(this.indicatorInputMap).forEach(([key, id]) => {
+			const input = document.getElementById(id);
+			if (input) {
+				input.checked = key === targetIndicator;
+			}
+		});
+	}
+
+	getSelectedIndicator() {
+		const selected = this.indicators.find((indicator) => {
+			const input = document.getElementById(this.indicatorInputMap[indicator]);
+			return input && input.checked;
+		});
+		return selected || this.defaultIndicator;
 	}
 
 	applyTableFilters() {
@@ -992,6 +1005,7 @@ class DashboardController {
 		this.tableFilteredData = [];
 		this.tableFilters = { gerente: "", agencia: "" };
 		this.sortState = { column: "", direction: "asc" };
+		this.setIndicatorSelection(this.defaultIndicator);
 
 		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
 		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
