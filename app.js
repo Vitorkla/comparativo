@@ -24,16 +24,16 @@ class DashboardController {
 		this.indicatorCheckboxMap = {
 			"Capital Social": "capitalSocial",
 			"Carteira Credito": "carteiraCredito",
-			"Associados": "associados",
+			Associados: "associados",
 			"RDC LCA": "rdcLca",
-			"Poupança": "poupanca",
+			Poupança: "poupanca",
 		};
 		this.tableIndicatorCheckboxMap = {
 			"Capital Social": "tableCapitalSocial",
 			"Carteira Credito": "tableCarteiraCredito",
-			"Associados": "tableAssociados",
+			Associados: "tableAssociados",
 			"RDC LCA": "tableRdcLca",
-			"Poupança": "tablePoupanca",
+			Poupança: "tablePoupanca",
 		};
 		this.tableFilters = { gerente: "", agencia: "" };
 		this.tableFilteredData = [];
@@ -854,15 +854,15 @@ class DashboardController {
 					})
 					.join("");
 
-					const gerenteInfo = row.gerente
-						? `<div class="entity-subtitle">${row.gerente}</div>`
-						: "";
+				const agenciaInfo = row.agencia
+					? `<div class="entity-subtitle">${row.agencia}</div>`
+					: "";
 
-					return `
+				return `
 	                <tr>
 	                    <td class="entity-cell">
-	                        <div class="entity-title">${row.agencia || "—"}</div>
-	                        ${gerenteInfo}
+	                        <div class="entity-title">${row.gerente || "—"}</div>
+	                        ${agenciaInfo}
 	                    </td>
 	                    ${indicatorCells}
 	                </tr>
