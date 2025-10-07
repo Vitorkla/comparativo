@@ -24,10 +24,19 @@ class DashboardController {
 		this.indicatorCheckboxMap = {
 			"Capital Social": "capitalSocial",
 			"Carteira Credito": "carteiraCredito",
-			Associados: "associados",
+			"Associados": "associados",
 			"RDC LCA": "rdcLca",
-			Poupança: "poupanca",
+			"Poupança": "poupanca",
 		};
+		this.tableIndicatorCheckboxMap = {
+			"Capital Social": "tableCapitalSocial",
+			"Carteira Credito": "tableCarteiraCredito",
+			"Associados": "tableAssociados",
+			"RDC LCA": "tableRdcLca",
+			"Poupança": "tablePoupanca",
+		};
+		this.tableFilters = { gerente: "", agencia: "" };
+		this.tableFilteredData = [];
 		this.expectedColumns = [
 			"Agência",
 			"Gerente de Negócios",
@@ -96,6 +105,41 @@ class DashboardController {
 				this.switchChart(e.target.dataset.chart),
 			);
 		});
+
+		// Filtros específicos da tabela
+		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
+		if (tableGerenteSelect) {
+			tableGerenteSelect.addEventListener("change", () =>
+				this.applyTableFilters(),
+			);
+		}
+
+		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
+		if (tableAgenciaSelect) {
+			tableAgenciaSelect.addEventListener("change", () =>
+				this.applyTableFilters(),
+			);
+		}
+
+		Object.values(this.tableIndicatorCheckboxMap).forEach((id) => {
+			const checkbox = document.getElementById(id);
+			if (checkbox) {
+				checkbox.addEventListener("change", () => {
+					if (!this.ensureTableIndicatorSelection()) {
+						checkbox.checked = true;
+					}
+					this.renderTable();
+				});
+			}
+		});
+
+		const clearTableFilters = document.getElementById("clearTableFilters");
+		if (clearTableFilters) {
+			clearTableFilters.addEventListener("click", (event) => {
+				event.preventDefault();
+				this.clearTableFilters();
+			});
+		}
 
 		// Ordenação da tabela (delegação para suportar cabeçalho dinâmico)
 		const tableHead = document.getElementById("tableHead");
@@ -425,6 +469,7 @@ class DashboardController {
 		});
 
 		this.filteredData = [...this.processedData];
+		this.tableFilteredData = [...this.processedData];
 	}
 
 	normalizeAgency(name) {
@@ -433,9 +478,9 @@ class DashboardController {
 
 	initializeDashboard() {
 		this.populateFilters();
-		this.updateStats();
-		this.renderTable();
-		this.renderChart();
+		this.populateTableFilters();
+		this.applyFilters();
+		this.applyTableFilters();
 	}
 
 	populateFilters() {
@@ -468,6 +513,39 @@ class DashboardController {
 		});
 	}
 
+	populateTableFilters() {
+		const gerentes = [
+			...new Set(this.processedData.map((item) => item.gerente)),
+		].sort();
+		const agencias = [
+			...new Set(this.processedData.map((item) => item.agencia)),
+		].sort();
+
+		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
+		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
+
+		if (!tableGerenteSelect || !tableAgenciaSelect) {
+			return;
+		}
+
+		tableGerenteSelect.innerHTML = '<option value="">Todos</option>';
+		tableAgenciaSelect.innerHTML = '<option value="">Todas</option>';
+
+		gerentes.forEach((gerente) => {
+			const option = document.createElement("option");
+			option.value = gerente;
+			option.textContent = gerente;
+			tableGerenteSelect.appendChild(option);
+		});
+
+		agencias.forEach((agencia) => {
+			const option = document.createElement("option");
+			option.value = agencia;
+			option.textContent = agencia;
+			tableAgenciaSelect.appendChild(option);
+		});
+	}
+
 	applyFilters() {
 		const selectedGerente = document.getElementById("gerenteSelect").value;
 		const selectedAgencia = document.getElementById("agenciaSelect").value;
@@ -487,7 +565,6 @@ class DashboardController {
 			return gerenteMatch && agenciaMatch && indicatorMatch;
 		});
 
-		this.renderTable();
 		this.renderChart();
 		this.updateStats();
 	}
@@ -501,6 +578,56 @@ class DashboardController {
 		});
 
 		this.applyFilters();
+	}
+
+	applyTableFilters() {
+		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
+		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
+
+		const selectedGerente = tableGerenteSelect ? tableGerenteSelect.value : "";
+		const selectedAgencia = tableAgenciaSelect ? tableAgenciaSelect.value : "";
+
+		this.tableFilters = {
+			gerente: selectedGerente,
+			agencia: selectedAgencia,
+		};
+
+		this.tableFilteredData = this.processedData.filter((item) => {
+			const gerenteMatch = !selectedGerente || item.gerente === selectedGerente;
+			const agenciaMatch = !selectedAgencia || item.agencia === selectedAgencia;
+			return gerenteMatch && agenciaMatch;
+		});
+
+		this.renderTable();
+	}
+
+	clearTableFilters() {
+		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
+		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
+
+		if (tableGerenteSelect) {
+			tableGerenteSelect.value = "";
+		}
+
+		if (tableAgenciaSelect) {
+			tableAgenciaSelect.value = "";
+		}
+
+		Object.values(this.tableIndicatorCheckboxMap).forEach((id) => {
+			const checkbox = document.getElementById(id);
+			if (checkbox) {
+				checkbox.checked = true;
+			}
+		});
+
+		this.tableFilters = { gerente: "", agencia: "" };
+		this.sortState = { column: "", direction: "asc" };
+
+		this.applyTableFilters();
+	}
+
+	ensureTableIndicatorSelection() {
+		return this.getActiveTableIndicators().length > 0;
 	}
 
 	formatCurrency(value) {
@@ -522,9 +649,9 @@ class DashboardController {
 		}).format(value / 100);
 	}
 
-	getActiveIndicators() {
+	getActiveTableIndicators() {
 		return this.indicators.filter((indicator) => {
-			const checkboxId = this.indicatorCheckboxMap[indicator];
+			const checkboxId = this.tableIndicatorCheckboxMap[indicator];
 			const checkbox = document.getElementById(checkboxId);
 			return checkbox ? checkbox.checked : true;
 		});
@@ -582,10 +709,10 @@ class DashboardController {
 	}
 
 	renderTable() {
-		const data = this.filteredData;
+		const data = this.tableFilteredData;
 		const tbody = document.getElementById("tableBody");
 		const tableHead = document.getElementById("tableHead");
-		const activeIndicators = this.getActiveIndicators();
+		const activeIndicators = this.getActiveTableIndicators();
 		const columnCount = 1 + activeIndicators.length;
 
 		if (
@@ -629,8 +756,14 @@ class DashboardController {
 			return;
 		}
 
-		if (data.length === 0) {
-			tbody.innerHTML = `<tr><td colspan="${columnCount}" class="no-data">Nenhum dado encontrado com os filtros aplicados</td></tr>`;
+		if (activeIndicators.length === 0) {
+			const colspan = Math.max(columnCount, 1);
+			tbody.innerHTML = `<tr><td colspan="${colspan}" class="no-data">Selecione ao menos um indicador da tabela</td></tr>`;
+			return;
+		}
+
+		if (!data || data.length === 0) {
+			tbody.innerHTML = `<tr><td colspan="${columnCount}" class="no-data">Nenhum dado encontrado com os filtros da tabela</td></tr>`;
 			return;
 		}
 
@@ -721,19 +854,19 @@ class DashboardController {
 					})
 					.join("");
 
-				const agenciaInfo = row.agencia
-					? `<div class="entity-subtitle">${row.agencia}</div>`
-					: "";
+					const gerenteInfo = row.gerente
+						? `<div class="entity-subtitle">${row.gerente}</div>`
+						: "";
 
-				return `
-                <tr>
-                    <td class="entity-cell">
-                        <div class="entity-title">${row.gerente || "—"}</div>
-                        ${agenciaInfo}
-                    </td>
-                    ${indicatorCells}
-                </tr>
-            `;
+					return `
+	                <tr>
+	                    <td class="entity-cell">
+	                        <div class="entity-title">${row.agencia || "—"}</div>
+	                        ${gerenteInfo}
+	                    </td>
+	                    ${indicatorCells}
+	                </tr>
+	        `;
 			})
 			.join("");
 	}
@@ -880,6 +1013,37 @@ class DashboardController {
 		// Reset dashboard data
 		this.processedData = [];
 		this.filteredData = [];
+		this.tableFilteredData = [];
+		this.tableFilters = { gerente: "", agencia: "" };
+		this.sortState = { column: "", direction: "asc" };
+
+		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
+		const tableAgenciaSelect = document.getElementById("tableAgenciaSelect");
+		if (tableGerenteSelect) {
+			tableGerenteSelect.innerHTML = '<option value="">Todos</option>';
+			tableGerenteSelect.value = "";
+		}
+		if (tableAgenciaSelect) {
+			tableAgenciaSelect.innerHTML = '<option value="">Todas</option>';
+			tableAgenciaSelect.value = "";
+		}
+
+		Object.values(this.tableIndicatorCheckboxMap).forEach((id) => {
+			const checkbox = document.getElementById(id);
+			if (checkbox) {
+				checkbox.checked = true;
+			}
+		});
+
+		const tableBody = document.getElementById("tableBody");
+		if (tableBody) {
+			tableBody.innerHTML = "";
+		}
+
+		const tableHead = document.getElementById("tableHead");
+		if (tableHead) {
+			tableHead.innerHTML = "";
+		}
 
 		// Destroy chart if exists
 		if (this.currentChart) {
