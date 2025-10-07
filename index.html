@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Comparativo - Upload e Análise CSV</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>Dashboard Comparativo - Análise de Indicadores Financeiros</h1>
+            <p class="subtitle">Faça upload de dois arquivos CSV para comparação</p>
+        </header>
+
+        <!-- Upload Section -->
+        <section class="upload-section" id="uploadSection">
+            <div class="upload-container">
+                <h2>Upload de Arquivos CSV</h2>
+                <p class="upload-description">Selecione dois arquivos CSV para comparar os indicadores financeiros entre diferentes períodos.</p>
+                
+                <div class="upload-grid">
+                    <div class="upload-area">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="file1" accept=".csv" class="file-input">
+                            <label for="file1" class="file-label">
+                                <div class="upload-icon">📁</div>
+                                <span class="upload-text">Carregar Arquivo 1<br><small>(Período Base)</small></span>
+                            </label>
+                        </div>
+                        <div class="file-info" id="fileInfo1">
+                            <div class="file-status">Nenhum arquivo selecionado</div>
+                        </div>
+                    </div>
+
+                    <div class="upload-area">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="file2" accept=".csv" class="file-input">
+                            <label for="file2" class="file-label">
+                                <div class="upload-icon">📁</div>
+                                <span class="upload-text">Carregar Arquivo 2<br><small>(Período Comparativo)</small></span>
+                            </label>
+                        </div>
+                        <div class="file-info" id="fileInfo2">
+                            <div class="file-status">Nenhum arquivo selecionado</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-actions">
+                    <button class="btn btn--primary btn--lg" id="processFiles" disabled>
+                        <span class="btn-text">Processar Arquivos</span>
+                        <div class="loading-spinner hidden" id="loadingSpinner"></div>
+                    </button>
+                </div>
+
+                <div class="upload-messages" id="uploadMessages"></div>
+            </div>
+        </section>
+
+        <!-- Dashboard Content (Hidden initially) -->
+        <div class="dashboard-content hidden" id="dashboardContent">
+            <!-- Statistics Cards -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total de Gerentes</h3>
+                        <span class="stat-value" id="totalGerentes">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total de Agências</h3>
+                        <span class="stat-value" id="totalAgencias">0</span>
+                    </div>
+                    <div class="stat-card stat-card--success">
+                        <h3>Maior Variação Positiva</h3>
+                        <span class="stat-value" id="maiorPositiva">R$ 0</span>
+                        <small id="gerentePositiva"></small>
+                    </div>
+                    <div class="stat-card stat-card--error">
+                        <h3>Maior Variação Negativa</h3>
+                        <span class="stat-value" id="maiorNegativa">R$ 0</span>
+                        <small id="gerenteNegativa"></small>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filters Section -->
+            <section class="filters-section">
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label for="gerenteSelect" class="form-label">Gerente de Negócios</label>
+                        <select id="gerenteSelect" class="form-control">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="agenciaSelect" class="form-label">Agência</label>
+                        <select id="agenciaSelect" class="form-control">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group indicators-group">
+                        <label class="form-label">Indicadores</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="capitalSocial" checked>
+                                <span class="checkmark"></span>
+                                Capital Social
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="carteiraCredito" checked>
+                                <span class="checkmark"></span>
+                                Carteira Crédito
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="associados" checked>
+                                <span class="checkmark"></span>
+                                Associados
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="rdcLca" checked>
+                                <span class="checkmark"></span>
+                                RDC LCA
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="poupanca" checked>
+                                <span class="checkmark"></span>
+                                Poupança
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button class="btn btn--secondary" id="clearFilters">Limpar Filtros</button>
+                        <button class="btn btn--outline" id="newUpload">Novos Arquivos</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="chart-controls">
+                    <h2>Visualizações</h2>
+                    <div class="chart-tabs">
+                        <button class="btn btn--primary chart-tab active" data-chart="bar">Gráfico de Barras</button>
+                        <button class="btn btn--outline chart-tab" data-chart="line">Gráfico de Linhas</button>
+                    </div>
+                </div>
+                
+                <div class="chart-container" style="position: relative; height: 400px;">
+                    <canvas id="mainChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Table Section -->
+            <section class="table-section">
+                <h2>Tabela Comparativa</h2>
+                <div class="table-container">
+                    <table class="comparison-table" id="comparisonTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
