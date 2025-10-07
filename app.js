@@ -6,6 +6,7 @@ class DashboardController {
 		this.processedData = [];
 		this.filteredData = [];
 		this.currentChart = null;
+		this.topCharts = { growth: null, decline: null };
 		this.sortState = { column: "", direction: "asc" };
 		this.indicators = [
 			"Capital Social",
@@ -556,6 +557,7 @@ class DashboardController {
 
 		this.renderChart();
 		this.updateStats();
+		this.renderTopVariations();
 	}
 
 	clearFilters() {
@@ -969,6 +971,250 @@ class DashboardController {
 		this.currentChart = new Chart(ctx, config);
 	}
 
+	renderTopVariations() {
+		const indicator = this.getSelectedIndicator();
+		const isMonetary = this.currencyIndicators.includes(indicator);
+		const growthIndicatorEl = document.getElementById("topGrowthIndicator");
+		const declineIndicatorEl = document.getElementById("topDeclineIndicator");
+
+		if (growthIndicatorEl) {
+			growthIndicatorEl.textContent = indicator || "-";
+		}
+		if (declineIndicatorEl) {
+			declineIndicatorEl.textContent = indicator || "-";
+		}
+
+		const aggregatedData = this.aggregateTopData(this.filteredData);
+		const topGrowth = aggregatedData
+			.filter((item) => item.diferenca > 0)
+			.sort((a, b) => b.diferenca - a.diferenca)
+			.slice(0, 5);
+		const topDecline = aggregatedData
+			.filter((item) => item.diferenca < 0)
+			.sort((a, b) => a.diferenca - b.diferenca)
+			.slice(0, 5);
+
+		this.updateTopList(topGrowth, "topGrowthList", true, isMonetary);
+		this.updateTopList(topDecline, "topDeclineList", false, isMonetary);
+		this.updateTopChartInstance("growth", "topGrowthChart", topGrowth, isMonetary);
+		this.updateTopChartInstance(
+			"decline",
+			"topDeclineChart",
+			topDecline,
+			isMonetary,
+		);
+	}
+
+	aggregateTopData(data) {
+		const map = new Map();
+
+		data.forEach((item) => {
+			if (!item) {
+				return;
+			}
+
+			const gerenteName = (item.gerente || "—").trim() || "—";
+			const key = gerenteName.toLowerCase();
+
+			if (!map.has(key)) {
+				map.set(key, {
+					gerente: gerenteName,
+					valor1: 0,
+					valor2: 0,
+					agencias: new Set(),
+				});
+			}
+
+			const aggregate = map.get(key);
+			aggregate.valor1 += item.valor1 || 0;
+			aggregate.valor2 += item.valor2 || 0;
+
+			if (item.agencia) {
+				aggregate.agencias.add(item.agencia);
+			}
+		});
+
+		return Array.from(map.values()).map((aggregate) => {
+			const agenciasList = Array.from(aggregate.agencias);
+			const valor1 = aggregate.valor1;
+			const valor2 = aggregate.valor2;
+			const diferenca = valor2 - valor1;
+			const percentual =
+				valor1 !== 0 ? (diferenca / Math.abs(valor1)) * 100 : 0;
+
+			let secondaryLabel = "";
+			if (agenciasList.length === 1) {
+				secondaryLabel = agenciasList[0];
+			} else if (agenciasList.length > 1) {
+				secondaryLabel = `${agenciasList[0]} +${agenciasList.length - 1}`;
+			}
+
+			return {
+				gerente: aggregate.gerente,
+				agencias: agenciasList,
+				displayName: aggregate.gerente,
+				secondaryLabel,
+				valor1,
+				valor2,
+				diferenca,
+				percentual,
+			};
+		});
+	}
+
+	updateTopList(items, elementId, isPositive, isMonetary) {
+		const container = document.getElementById(elementId);
+		if (!container) {
+			return;
+		}
+
+		if (!items || items.length === 0) {
+			container.innerHTML =
+				'<div class="empty-state">Nenhum dado disponível para os filtros atuais.</div>';
+			return;
+		}
+
+		const listHtml = items
+			.map((item) => {
+				const diffClass = isPositive ? "positive" : "negative";
+				const diffValue = this.formatDifference(item.diferenca, isMonetary);
+				const value1 = isMonetary
+					? this.formatCurrency(item.valor1)
+					: this.formatNumber(item.valor1);
+				const value2 = isMonetary
+					? this.formatCurrency(item.valor2)
+					: this.formatNumber(item.valor2);
+
+				const percentValue = Number.isFinite(item.percentual)
+					? `${item.percentual >= 0 ? "+" : ""}${this.formatPercentage(
+							item.percentual,
+						)}`
+					: "";
+
+				const percentHtml = percentValue
+					? `<span class="top-list-percent">${percentValue}</span>`
+					: "";
+
+				const secondaryHtml = item.secondaryLabel
+					? `<span class="top-list-meta">${item.secondaryLabel}</span>`
+					: "";
+
+				return `
+                <div class="top-list-item">
+                    <div class="top-list-info">
+                        <span class="top-list-name">${item.displayName}</span>
+                        ${secondaryHtml}
+                    </div>
+                    <div class="top-list-values">
+                        <span class="top-list-diff ${diffClass}">${diffValue}</span>
+                        <div class="top-list-trend">
+                            <span>${value1}</span>
+                            <span>→</span>
+                            <span>${value2}</span>
+                        </div>
+                        ${percentHtml}
+                    </div>
+                </div>
+            `;
+			})
+			.join("");
+
+		container.innerHTML = listHtml;
+	}
+
+	updateTopChartInstance(type, canvasId, items, isMonetary) {
+		const canvas = document.getElementById(canvasId);
+		if (!canvas) {
+			return;
+		}
+
+		if (this.topCharts[type]) {
+			this.topCharts[type].destroy();
+			this.topCharts[type] = null;
+		}
+
+		const context = canvas.getContext("2d");
+		if (!context) {
+			return;
+		}
+
+		if (!items || items.length === 0) {
+			context.clearRect(0, 0, canvas.width || canvas.clientWidth, canvas.height || canvas.clientHeight);
+			return;
+		}
+
+		const labels = items.map((item) => item.displayName);
+		const data = items.map((item) => item.diferenca);
+		const rootStyles = getComputedStyle(document.documentElement);
+		const successColor =
+			rootStyles.getPropertyValue("--color-success").trim() || "#21808d";
+		const errorColor =
+			rootStyles.getPropertyValue("--color-error").trim() || "#c0152f";
+		const color = type === "growth" ? successColor : errorColor;
+
+		const formatValue = (value) =>
+			isMonetary ? this.formatCurrency(value) : this.formatNumber(value);
+
+		const config = {
+			type: "bar",
+			data: {
+				labels,
+				datasets: [
+					{
+						data,
+						backgroundColor: color,
+						borderColor: color,
+						borderWidth: 1,
+						borderRadius: 6,
+						barPercentage: 0.75,
+						categoryPercentage: 0.65,
+					},
+				],
+			},
+			options: {
+				indexAxis: "y",
+				responsive: true,
+				maintainAspectRatio: false,
+				scales: {
+					x: {
+						beginAtZero: true,
+						grid: {
+							drawBorder: false,
+							color: "rgba(0, 0, 0, 0.05)",
+						},
+						ticks: {
+							callback: (value) => formatValue(value),
+							autoSkip: true,
+							maxTicksLimit: 6,
+						},
+					},
+					y: {
+						grid: {
+							drawBorder: false,
+							display: false,
+						},
+						ticks: {
+							autoSkip: false,
+							maxTicksLimit: 6,
+						},
+					},
+				},
+				plugins: {
+					legend: {
+						display: false,
+					},
+					tooltip: {
+						callbacks: {
+							label: (context) => formatValue(context.parsed.x),
+						},
+					},
+				},
+			},
+		};
+
+		this.topCharts[type] = new Chart(context, config);
+	}
+
 	sortTable(column) {
 		if (this.sortState.column === column) {
 			this.sortState.direction =
@@ -1039,6 +1285,29 @@ class DashboardController {
 		if (this.currentChart) {
 			this.currentChart.destroy();
 			this.currentChart = null;
+		}
+		Object.keys(this.topCharts).forEach((key) => {
+			if (this.topCharts[key]) {
+				this.topCharts[key].destroy();
+				this.topCharts[key] = null;
+			}
+		});
+
+		const topGrowthList = document.getElementById("topGrowthList");
+		const topDeclineList = document.getElementById("topDeclineList");
+		if (topGrowthList) {
+			topGrowthList.innerHTML = "";
+		}
+		if (topDeclineList) {
+			topDeclineList.innerHTML = "";
+		}
+		const topGrowthIndicator = document.getElementById("topGrowthIndicator");
+		const topDeclineIndicator = document.getElementById("topDeclineIndicator");
+		if (topGrowthIndicator) {
+			topGrowthIndicator.textContent = "-";
+		}
+		if (topDeclineIndicator) {
+			topDeclineIndicator.textContent = "-";
 		}
 
 		// Update header
