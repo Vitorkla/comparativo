@@ -6,7 +6,6 @@ class DashboardController {
 		this.processedData = [];
 		this.filteredData = [];
 		this.currentChart = null;
-		this.currentChartType = "bar";
 		this.sortState = { column: "", direction: "asc" };
 		this.indicators = [
 			"Capital Social",
@@ -98,13 +97,6 @@ class DashboardController {
 		document
 			.getElementById("clearFilters")
 			.addEventListener("click", () => this.clearFilters());
-
-		// Tabs dos gráficos
-		document.querySelectorAll(".chart-tab").forEach((tab) => {
-			tab.addEventListener("click", (e) =>
-				this.switchChart(e.target.dataset.chart),
-			);
-		});
 
 		// Filtros específicos da tabela
 		const tableGerenteSelect = document.getElementById("tableGerenteSelect");
@@ -899,7 +891,7 @@ class DashboardController {
 		const valores2 = labels.map((label) => groupedData[label].valor2);
 
 		const config = {
-			type: this.currentChartType,
+			type: "bar",
 			data: {
 				labels: labels.map((label) =>
 					label.length > 15 ? label.substring(0, 15) + "..." : label,
@@ -927,7 +919,7 @@ class DashboardController {
 				plugins: {
 					title: {
 						display: true,
-						text: `Comparação de Indicadores por Gerente (${this.currentChartType === "bar" ? "Barras" : "Linhas"})`,
+						text: "Comparação de Indicadores por Gerente (Barras)",
 					},
 					legend: {
 						display: true,
@@ -962,22 +954,6 @@ class DashboardController {
 		};
 
 		this.currentChart = new Chart(ctx, config);
-	}
-
-	switchChart(type) {
-		this.currentChartType = type;
-
-		// Atualizar tabs ativas
-		document.querySelectorAll(".chart-tab").forEach((tab) => {
-			tab.classList.remove("active", "btn--primary");
-			tab.classList.add("btn--outline");
-			if (tab.dataset.chart === type) {
-				tab.classList.remove("btn--outline");
-				tab.classList.add("active", "btn--primary");
-			}
-		});
-
-		this.renderChart();
 	}
 
 	sortTable(column) {
